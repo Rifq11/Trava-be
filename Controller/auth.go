@@ -25,14 +25,6 @@ func Register(c *gin.Context) {
 		roleID = *req.RoleID
 	}
 
-	if roleID == 2 && req.Phone == "" {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
-			Status:  "error",
-			Message: "Phone number is required for user registration",
-		})
-		return
-	}
-
 	var existingUser models.User
 	if err := config.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
 		c.JSON(http.StatusConflict, models.ErrorResponse{
@@ -65,15 +57,6 @@ func Register(c *gin.Context) {
 			Message: "Failed to register user",
 		})
 		return
-	}
-
-	if roleID == 2 && req.Phone != "" {
-		userProfile := models.UserProfile{
-			UserID:      user.ID,
-			Phone:       req.Phone,
-			IsCompleted: false,
-		}
-		config.DB.Create(&userProfile)
 	}
 
 	registerResponse := models.RegisterResponse{

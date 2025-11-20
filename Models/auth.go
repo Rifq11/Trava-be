@@ -5,7 +5,6 @@ type RegisterRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=6"`
 	RoleID   *int   `json:"role_id"`
-	Phone    string `json:"phone"`
 }
 
 type LoginRequest struct {
@@ -37,12 +36,11 @@ type UpdateProfileRequest struct {
 }
 
 type UserProfile struct {
-	ID         int    `gorm:"primaryKey;autoIncrement" json:"id"`
-	UserID     int    `gorm:"not null;index" json:"user_id"`
-	Phone      string `gorm:"type:varchar(50)" json:"phone"`
-	Address    string `gorm:"type:text" json:"address"`
-	BirthDate  string `gorm:"type:date" json:"birth_date"`
-	UserPhoto  string `gorm:"type:varchar(500)" json:"user_photo"`
-	IsCompleted bool  `gorm:"default:false" json:"is_completed"`
+	ID          int    `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID      int    `gorm:"not null;index" json:"user_id"`
+	Phone       string `gorm:"type:varchar(50)" json:"phone"`
+	Address     string `gorm:"type:text" json:"address"`
+	BirthDate   string `gorm:"type:date" json:"birth_date"`
+	UserPhoto   string `gorm:"type:varchar(500)" json:"user_photo"`
+	IsCompleted bool   `gorm:"default:false" json:"is_completed"`
 }
-

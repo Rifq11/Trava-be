@@ -78,8 +78,9 @@ Aplikasi akan berjalan di `http://localhost:8080`.
 ### Auth
 
 - `POST /api/auth/register` — Register user
-  - **User registration**: Requires `phone` field (role_id = 2)
-  - **Admin registration**: No `phone` required (role_id = 1)
+  - Requires: `full_name`, `email`, `password`
+  - Optional: `role_id` (default: 2 for user, 1 for admin)
+  - Phone number will be filled in complete profile step
 - `POST /api/auth/login` — Login user
 - `PUT /api/auth/profile` — Update own profile (requires auth)
   - Can update: `full_name`, `email`, `phone`, `address`, `birth_date`, `password`
@@ -140,19 +141,20 @@ sequenceDiagram
     participant UserProfile
 
     note right of Client: User Registration
-    Client->>AuthController: POST /api/auth/register<br>Body: {full_name, email, password, phone}
+    Client->>AuthController: POST /api/auth/register<br>Body: {full_name, email, password}
     AuthController->>Database: Check if email exists
     Database-->>AuthController: Email not found
-    AuthController->>Database: Hash password with bcrypt
-    AuthController->>Database: Create user record
+    AuthController->>AuthController: Hash password with bcrypt
+    AuthController->>Database: Create user record<br>role_id: 2 (default: user)
     Database-->>AuthController: User created (id: 1)
     
-    alt Role is User (role_id = 2)
-        AuthController->>UserProfile: Create user profile with phone
-        UserProfile-->>AuthController: Profile created
-    end
-    
     AuthController-->>Client: {status: "success", message: "User registered successfully", data: {user_id, email, full_name}}
+    
+    note right of Client: Complete Profile (separate step)
+    Client->>AuthController: POST /api/profile/complete<br>Header: x-user-id: 1<br>Body: {phone, address, birth_date}
+    AuthController->>Database: Create/Update user profile with phone
+    Database-->>AuthController: Profile created/updated
+    AuthController-->>Client: {status: "success", message: "Profile completed successfully"}
 
     note right of Client: User Login
     Client->>AuthController: POST /api/auth/login<br>Body: {email, password}
@@ -464,10 +466,11 @@ curl -X POST http://localhost:8080/api/auth/register \
   -d '{
     "full_name": "John Doe",
     "email": "john@example.com",
-    "password": "password123",
-    "phone": "081234567890"
+    "password": "password"
   }'
 ```
+
+**Note:** Phone number is not required during registration. It will be filled when completing the profile via `POST /api/profile/complete`.
 
 ### Example: Login
 
@@ -476,7 +479,7 @@ curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "john@example.com",
-    "password": "password123"
+    "password": "password"
   }'
 ```
 
