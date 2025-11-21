@@ -39,7 +39,7 @@ go mod download
 
 ### 4. Configure database
 
-Edit `Config/config.go` dan sesuaikan database connection string:
+Edit `config/config.go` dan sesuaikan database connection string:
 
 ```go
 dsn := "root@tcp(127.0.0.1:3306)/trava?charset=utf8mb4&parseTime=True&loc=Local"
@@ -59,10 +59,23 @@ Pastikan database MySQL sudah dibuat dan tabel-tabel sudah ada (menggunakan sche
 #### Development:
 
 ```bash
-go run main.go
+go run server/main.go
+```
+
+atau dari root directory:
+
+```bash
+go run .
 ```
 
 #### Production (build first):
+
+```bash
+go build -o trava-be server/main.go
+./trava-be
+```
+
+atau dari root directory:
 
 ```bash
 go build -o trava-be .
@@ -157,7 +170,7 @@ sequenceDiagram
     AuthController-->>Client: {status: "success", message: "User registered successfully", data: {user_id, email, full_name}}
     
     note right of Client: Complete Profile (separate step)
-    Client->>AuthController: POST /api/profile/complete<br>Header: x-user-id: 1<br>Body: {phone, address, birth_date}
+    Client->>AuthController: PUT /api/profile/complete<br>Header: x-user-id: 1<br>Body: {phone, address, birth_date, user_photo}
     AuthController->>Database: Create/Update user profile with phone
     Database-->>AuthController: Profile created/updated
     AuthController-->>Client: {status: "success", message: "Profile completed successfully"}
@@ -599,9 +612,9 @@ Semua response menggunakan format yang sama dengan Express backend:
 
 ```
 Trava-be/
-├── Config/
+├── config/
 │   └── config.go          # Database connection
-├── Controller/
+├── controller/
 │   ├── auth.go            # Auth controller
 │   ├── booking.go         # Booking controller
 │   ├── destination.go     # Destination controller
@@ -610,11 +623,11 @@ Trava-be/
 │   ├── review.go          # Review controller
 │   ├── user.go            # User controller
 │   └── activity.go        # Activity controller
-├── Helper/
+├── helper/
 │   └── upload.go          # File upload utilities
-├── Middleware/
+├── middleware/
 │   └── auth.go            # Authentication & authorization middleware
-├── Models/
+├── models/
 │   ├── auth.go            # Auth models
 │   ├── booking.go         # Booking models
 │   ├── destination.go     # Destination models
@@ -624,7 +637,7 @@ Trava-be/
 │   ├── user.go            # User models
 │   ├── activity.go        # Activity models
 │   └── response.go        # Response models
-├── Routes/
+├── routes/
 │   ├── auth.go            # Auth routes
 │   ├── booking.go         # Booking routes
 │   ├── destination.go     # Destination routes
@@ -640,6 +653,7 @@ Trava-be/
 │   └── uploads/           # Uploaded files directory
 ├── go.mod                 # Go module dependencies
 ├── go.sum                 # Go module checksums
+├── Trava.postman_collection.json  # Postman collection
 └── README.md              # This file
 ```
 
@@ -659,10 +673,23 @@ Trava-be/
 ### Run in development mode:
 
 ```bash
-go run main.go
+go run server/main.go
+```
+
+atau dari root directory:
+
+```bash
+go run .
 ```
 
 ### Build for production:
+
+```bash
+go build -o trava-be server/main.go
+./trava-be
+```
+
+atau dari root directory:
 
 ```bash
 go build -o trava-be .
@@ -675,6 +702,8 @@ go build -o trava-be .
 go install github.com/cosmtrek/air@latest
 air
 ```
+
+**Note:** Pastikan file `.air.toml` (jika ada) mengarah ke `server/main.go` atau root directory.
 
 ---
 
@@ -692,7 +721,7 @@ curl -X POST http://localhost:8080/api/auth/register \
   }'
 ```
 
-**Note:** Phone number is not required during registration. It will be filled when completing the profile via `POST /api/profile/complete`.
+**Note:** Phone number is not required during registration. It will be filled when completing the profile via `PUT /api/profile/complete`.
 
 ### Example: Login
 
