@@ -2,7 +2,6 @@ package controller
 
 import (
 	"net/http"
-	"strconv"
 
 	config "github.com/Rifq11/Trava-be/config"
 	helper "github.com/Rifq11/Trava-be/helper"
@@ -48,7 +47,13 @@ func GetProfile(c *gin.Context) {
 	}
 
 	response := models.ProfileResponse{
-		User:    user,
+		User: models.ProfileUserResponse{
+			ID:       user.ID,
+			FullName: user.FullName,
+			Email:    user.Email,
+			Password: user.Password,
+			RoleID:   user.RoleID,
+		},
 		Profile: profile,
 	}
 
@@ -86,10 +91,6 @@ func CompleteProfile(c *gin.Context) {
 	if birthDate == "" {
 		birthDate = c.PostForm("birthDate")
 	}
-	isAdminStr := c.PostForm("is_admin")
-	if isAdminStr == "" {
-		isAdminStr = c.PostForm("isAdmin")
-	}
 
 	var req models.CompleteProfileRequest
 	if phone != "" {
@@ -104,12 +105,10 @@ func CompleteProfile(c *gin.Context) {
 	if userPhoto != "" {
 		req.UserPhoto = &userPhoto
 	}
-	if isAdminStr != "" {
-		isAdmin, err := strconv.ParseBool(isAdminStr)
-		if err == nil {
-			req.IsAdmin = &isAdmin
-		}
-	}
+	roleName, _ := c.Get("user_role_name")
+	roleIDVal, _ := c.Get("user_role_id")
+	var adminProfile models.AdminProfile
+	var userProfile models.UserProfile
 
 	var user models.User
 	result := config.DB.First(&user, userIdInt)
@@ -123,12 +122,16 @@ func CompleteProfile(c *gin.Context) {
 	}
 
 	isAdmin := false
-	if req.IsAdmin != nil {
-		isAdmin = *req.IsAdmin
+	if roleNameStr, ok := roleName.(string); ok && roleNameStr == "admin" {
+		isAdmin = true
+	}
+	if !isAdmin {
+		if roleIDInt, ok := roleIDVal.(int); ok && roleIDInt == 1 {
+			isAdmin = true
+		}
 	}
 
 	if isAdmin {
-		var adminProfile models.AdminProfile
 		result := config.DB.Where("user_id = ?", userIdInt).First(&adminProfile)
 		if result.Error == nil {
 			if req.Phone != nil {
@@ -169,9 +172,9 @@ func CompleteProfile(c *gin.Context) {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
+			adminProfile = newProfile
 		}
 	} else {
-		var userProfile models.UserProfile
 		result := config.DB.Where("user_id = ?", userIdInt).First(&userProfile)
 		if result.Error == nil {
 			if req.Phone != nil {
@@ -212,8 +215,37 @@ func CompleteProfile(c *gin.Context) {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
+			userProfile = newProfile
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Profile completed successfully"})
+	var response models.ProfileDetailResponse
+	if isAdmin {
+		response = models.ProfileDetailResponse{
+			FullName:  user.FullName,
+			Email:     user.Email,
+			Phone:     adminProfile.Phone,
+			Address:   adminProfile.Address,
+			BirthDate: adminProfile.BirthDate,
+			UserPhoto: adminProfile.UserPhoto,
+			Password:  user.Password,
+			RoleID:    user.RoleID,
+		}
+	} else {
+		response = models.ProfileDetailResponse{
+			FullName:  user.FullName,
+			Email:     user.Email,
+			Phone:     userProfile.Phone,
+			Address:   userProfile.Address,
+			BirthDate: userProfile.BirthDate,
+			UserPhoto: userProfile.UserPhoto,
+			Password:  user.Password,
+			RoleID:    user.RoleID,
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Profile completed successfully",
+		"data":    response,
+	})
 }

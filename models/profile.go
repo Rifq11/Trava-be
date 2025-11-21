@@ -1,8 +1,16 @@
 package models
 
+type ProfileUserResponse struct {
+	ID       int    `json:"id"`
+	FullName string `json:"full_name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	RoleID   int    `json:"role_id"`
+}
+
 type ProfileResponse struct {
-	User    User        `json:"user"`
-	Profile interface{} `json:"profile"` // Can be UserProfile or AdminProfile
+	User    ProfileUserResponse `json:"user"`
+	Profile interface{}         `json:"profile"` // Can be UserProfile or AdminProfile
 }
 
 type CompleteProfileRequest struct {
@@ -10,7 +18,17 @@ type CompleteProfileRequest struct {
 	Address   *string `json:"address"`
 	BirthDate *string `json:"birth_date"`
 	UserPhoto *string `json:"user_photo"`
-	IsAdmin   *bool   `json:"is_admin"`
+}
+
+type ProfileDetailResponse struct {
+	FullName  string `json:"full_name"`
+	Email     string `json:"email"`
+	Phone     string `json:"phone"`
+	Address   string `json:"address"`
+	BirthDate string `json:"birth_date"`
+	UserPhoto string `json:"user_photo"`
+	Password  string `json:"password"`
+	RoleID    int    `json:"role_id"`
 }
 
 type AdminProfile struct {
@@ -22,4 +40,3 @@ type AdminProfile struct {
 	UserPhoto   string `gorm:"type:varchar(500)" json:"user_photo"`
 	IsCompleted bool   `gorm:"default:false" json:"is_completed"`
 }
-

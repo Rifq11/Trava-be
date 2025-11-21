@@ -11,15 +11,12 @@ import (
 )
 
 func GetDestinations(c *gin.Context) {
-	var destinations []models.DestinationResponse
+	var destinations []models.Destination
 
-	query := config.DB.
-		Table("destinations").
-		Select("destinations.id, destinations.name, destinations.description, destinations.location, destinations.price_per_person, destinations.image, destinations.category_id, destination_categories.name AS category_name, destinations.created_by")
-
-	if err := query.Joins("LEFT JOIN destination_categories ON destinations.category_id = destination_categories.id").Scan(&destinations).Error; err != nil {
+	result := config.DB.Find(&destinations)
+	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
+			"error": result.Error.Error(),
 		})
 		return
 	}
@@ -31,24 +28,18 @@ func GetDestinations(c *gin.Context) {
 
 func GetDestinationById(c *gin.Context) {
 	id := c.Param("id")
-	var destination models.DestinationDetailResponse
+	var destination models.Destination
 
-	query := config.DB.
-		Table("destinations").
-		Select("destinations.id, destinations.name, destinations.description, destinations.location, destinations.price_per_person, destinations.image, destinations.category_id, destination_categories.name AS category_name, users.full_name AS creator_name, destinations.created_by").
-		Joins("LEFT JOIN destination_categories ON destinations.category_id = destination_categories.id").
-		Joins("LEFT JOIN users ON destinations.created_by = users.id").
-		Where("destinations.id = ?", id)
-
-	if err := query.First(&destination).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+	result := config.DB.First(&destination, id)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{
 				"error": "Destination Not Found",
 			})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
+			"error": result.Error.Error(),
 		})
 		return
 	}
@@ -126,7 +117,7 @@ func UpdateDestination(c *gin.Context) {
 	}
 
 	var req models.UpdateDestinationRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -162,6 +153,8 @@ func UpdateDestination(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	config.DB.First(&destination, id)
 
 	c.JSON(http.StatusOK, models.SuccessResponse{
 		Message: "Destination updated successfully",

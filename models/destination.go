@@ -19,7 +19,6 @@ type DestinationResponse struct {
 	PricePerPerson int    `json:"price_per_person"`
 	Image          string `json:"image"`
 	CategoryID     int    `json:"category_id"`
-	CategoryName   string `json:"category_name"`
 	CreatedBy      int    `json:"created_by"`
 }
 
@@ -31,27 +30,25 @@ type DestinationDetailResponse struct {
 	PricePerPerson int    `json:"price_per_person"`
 	Image          string `json:"image"`
 	CategoryID     int    `json:"category_id"`
-	CategoryName   string `json:"category_name"`
 	CreatedBy      int    `json:"created_by"`
-	CreatorName    string `json:"creator_name"`
 }
 
 type CreateDestinationRequest struct {
-	CategoryID     int    `json:"category_id" binding:"required"`
-	Name           string `json:"name" binding:"required"`
-	Description    string `json:"description"`
-	Location       string `json:"location" binding:"required"`
-	PricePerPerson int    `json:"price_per_person" binding:"required"`
-	Image          string `json:"image"`
+	CategoryID     int    `json:"category_id" form:"category_id" binding:"required"`
+	Name           string `json:"name" form:"name" binding:"required"`
+	Description    string `json:"description" form:"description"`
+	Location       string `json:"location" form:"location" binding:"required"`
+	PricePerPerson int    `json:"price_per_person" form:"price_per_person" binding:"required"`
+	Image          string `json:"image" form:"image"`
 }
 
 type UpdateDestinationRequest struct {
-	CategoryID     *int    `json:"category_id"`
-	Name           *string `json:"name"`
-	Description    *string `json:"description"`
-	Location       *string `json:"location"`
-	PricePerPerson *int    `json:"price_per_person"`
-	Image          *string `json:"image"`
+	CategoryID     *int    `json:"category_id" form:"category_id"`
+	Name           *string `json:"name" form:"name"`
+	Description    *string `json:"description" form:"description"`
+	Location       *string `json:"location" form:"location"`
+	PricePerPerson *int    `json:"price_per_person" form:"price_per_person"`
+	Image          *string `json:"image" form:"image"`
 }
 
 type DestinationCategory struct {

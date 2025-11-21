@@ -12,42 +12,28 @@ import (
 )
 
 func GetAllUsers(c *gin.Context) {
-	var userResponses []models.UserResponse
+	var users []models.User
 
-	result := config.DB.
-		Table("users").
-		Select("users.id, users.full_name, users.email, users.role_id, roles.name as role_name").
-		Joins("INNER JOIN roles ON users.role_id = roles.id").
-		Order("users.id").
-		Scan(&userResponses)
-
+	result := config.DB.Find(&users)
 	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": result.Error.Error(),
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
 		return
 	}
 
-	if userResponses == nil {
-		userResponses = []models.UserResponse{}
+	if users == nil {
+		users = []models.User{}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"data": userResponses,
+		"data": users,
 	})
 }
 
 func GetUserById(c *gin.Context) {
 	id := c.Param("id")
 
-	var userResponse models.UserResponse
-	result := config.DB.
-		Table("users").
-		Select("users.id, users.full_name, users.email, users.role_id, roles.name as role_name").
-		Joins("INNER JOIN roles ON users.role_id = roles.id").
-		Where("users.id = ?", id).
-		First(&userResponse)
-
+	var user models.User
+	result := config.DB.First(&user, id)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{
@@ -62,7 +48,7 @@ func GetUserById(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"data": userResponse,
+		"data":    user,
 	})
 }
 
@@ -105,21 +91,9 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	// Get role name for response
-	var role models.Role
-	config.DB.First(&role, user.RoleID)
-
-	userResponse := models.UserResponse{
-		ID:       user.ID,
-		FullName: user.FullName,
-		Email:    user.Email,
-		RoleID:   user.RoleID,
-		RoleName: role.Name,
-	}
-
 	c.JSON(http.StatusOK, gin.H{
 		"message": "User created successfully",
-		"data":    userResponse,
+		"data":    user,
 	})
 }
 

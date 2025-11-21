@@ -16,8 +16,8 @@ type User struct {
 	RoleID    int       `gorm:"type:int;not null;index" json:"role_id"`
 	FullName  string    `gorm:"type:varchar(255);not null" json:"full_name"`
 	Email     string    `gorm:"type:varchar(255);not null;uniqueIndex" json:"email"`
-	Password  string    `gorm:"type:varchar(255);not null" json:"-"`
-	Role      Role      `gorm:"foreignKey:RoleID" json:"role,omitempty"`
+	Password  string    `gorm:"type:varchar(255);not null" json:"password"`
+	Role      Role      `gorm:"foreignKey:RoleID" json:"-"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -27,7 +27,7 @@ type UserResponse struct {
 	FullName string `json:"full_name"`
 	Email    string `json:"email"`
 	RoleID   int    `json:"role_id"`
-	RoleName string `json:"role_name"`
+	Password string `json:"password"`
 }
 
 type CreateUserRequest struct {

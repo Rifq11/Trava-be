@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strings"
 
 	config "github.com/Rifq11/Trava-be/config"
 	models "github.com/Rifq11/Trava-be/models"
@@ -95,16 +96,10 @@ func GetMyBookings(c *gin.Context) {
 
 	userIdInt := userID.(int)
 
-	var bookings []models.BookingResponse
+	var bookings []models.Booking
 	result := config.DB.
-		Table("bookings").
-		Select("bookings.id as booking_id, destinations.name as destination_name, destinations.location, bookings.people_count, bookings.start_date, bookings.end_date, bookings.total_price, booking_status.name as status_name, payment_methods.name as payment_method_name").
-		Joins("INNER JOIN destinations ON bookings.destination_id = destinations.id").
-		Joins("INNER JOIN booking_status ON bookings.status_id = booking_status.id").
-		Joins("INNER JOIN payment_methods ON bookings.payment_method_id = payment_methods.id").
-		Where("bookings.user_id = ?", userIdInt).
-		Order("bookings.id DESC").
-		Scan(&bookings)
+		Where("user_id = ?", userIdInt).
+		Find(&bookings)
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -113,7 +108,71 @@ func GetMyBookings(c *gin.Context) {
 		return
 	}
 
+	if bookings == nil {
+		bookings = []models.Booking{}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"data": bookings,
+	})
+}
+
+func GetAllBookingsAdmin(c *gin.Context) {
+	var bookings []models.Booking
+	if err := config.DB.
+		Find(&bookings).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if bookings == nil {
+		bookings = []models.Booking{}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": bookings})
+}
+
+func ApproveBooking(c *gin.Context) {
+	updateBookingStatus(c, "approved")
+}
+
+func RejectBooking(c *gin.Context) {
+	updateBookingStatus(c, "rejected")
+}
+
+func updateBookingStatus(c *gin.Context, statusName string) {
+	id := c.Param("id")
+
+	var booking models.Booking
+	if err := config.DB.First(&booking, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Booking not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	var status models.BookingStatus
+	if err := config.DB.Table("booking_status").
+		Where("LOWER(name) = ?", strings.ToLower(statusName)).
+		First(&status).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid booking status"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := config.DB.Model(&booking).Update("status_id", status.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	config.DB.First(&booking, id)
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Booking status updated",
+		"data":    booking,
 	})
 }

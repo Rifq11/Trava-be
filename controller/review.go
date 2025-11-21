@@ -87,7 +87,12 @@ func GetDestinationReviews(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"data": reviews,
-	})
+	if len(reviews) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"data": nil,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": reviews})
 }

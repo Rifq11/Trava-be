@@ -4,7 +4,9 @@ import (
 	"net/http"
 
 	config "github.com/Rifq11/Trava-be/config"
+	helper "github.com/Rifq11/Trava-be/helper"
 	models "github.com/Rifq11/Trava-be/models"
+	"github.com/Rifq11/Trava-be/utils"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -51,12 +53,21 @@ func Register(c *gin.Context) {
 		return
 	}
 
+	token, err := utils.GenerateToken(user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "User registered successfully",
 		"data": models.RegisterResponse{
 			UserID:   user.ID,
 			Email:    user.Email,
 			FullName: user.FullName,
+			RoleID:   user.RoleID,
+			Password: user.Password,
+			Token:    token,
 		},
 	})
 }
@@ -88,12 +99,9 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	var role models.Role
-	result = config.DB.First(&role, user.RoleID)
-	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": result.Error.Error(),
-		})
+	token, err := utils.GenerateToken(user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
 	}
 
@@ -102,7 +110,8 @@ func Login(c *gin.Context) {
 		Email:    user.Email,
 		FullName: user.FullName,
 		RoleID:   user.RoleID,
-		RoleName: role.Name,
+		Password: user.Password,
+		Token:    token,
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -119,7 +128,7 @@ func UpdateProfile(c *gin.Context) {
 	}
 
 	var req models.UpdateProfileRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -163,41 +172,66 @@ func UpdateProfile(c *gin.Context) {
 	}
 
 	var userProfile models.UserProfile
-	if err := config.DB.Where("user_id = ?", userIdInt).First(&userProfile).Error; err != nil {
+	err := config.DB.Where("user_id = ?", userIdInt).First(&userProfile).Error
+	isNewProfile := false
+	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			newProfile := models.UserProfile{UserID: userIdInt}
-			if req.Phone != nil {
-				newProfile.Phone = *req.Phone
-			}
-			if req.Address != nil {
-				newProfile.Address = *req.Address
-			}
-			if req.BirthDate != nil {
-				newProfile.BirthDate = *req.BirthDate
-			}
-			if err := config.DB.Create(&newProfile).Error; err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
+			userProfile = models.UserProfile{UserID: userIdInt}
+			isNewProfile = true
 		} else {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+	}
+
+	if req.Phone != nil {
+		userProfile.Phone = *req.Phone
+	}
+	if req.Address != nil {
+		userProfile.Address = *req.Address
+	}
+	if req.BirthDate != nil {
+		userProfile.BirthDate = *req.BirthDate
+	}
+
+	var userPhoto string
+	if uploadedFile, ok := c.Get("uploaded_file"); ok {
+		if filename, ok2 := uploadedFile.(string); ok2 {
+			userPhoto = helper.GetFileUrl(filename)
+		}
+	}
+	if userPhoto == "" && req.UserPhoto != nil {
+		userPhoto = *req.UserPhoto
+	}
+	if userPhoto != "" {
+		userProfile.UserPhoto = userPhoto
+	}
+
+	if isNewProfile {
+		if err := config.DB.Create(&userProfile).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 	} else {
-		if req.Phone != nil {
-			userProfile.Phone = *req.Phone
-		}
-		if req.Address != nil {
-			userProfile.Address = *req.Address
-		}
-		if req.BirthDate != nil {
-			userProfile.BirthDate = *req.BirthDate
-		}
 		if err := config.DB.Save(&userProfile).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Profile updated successfully"})
+	response := models.ProfileDetailResponse{
+		FullName:  user.FullName,
+		Email:     user.Email,
+		Phone:     userProfile.Phone,
+		Address:   userProfile.Address,
+		BirthDate: userProfile.BirthDate,
+		UserPhoto: userProfile.UserPhoto,
+		Password:  user.Password,
+		RoleID:    user.RoleID,
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Profile updated successfully",
+		"data":    response,
+	})
 }
