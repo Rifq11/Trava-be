@@ -86,4 +86,3 @@ func UpdatePayment(c *gin.Context) {
 		"data":    payment,
 	})
 }
-

@@ -13,10 +13,13 @@ import (
 func GetDestinations(c *gin.Context) {
 	var destinations []models.DestinationResponse
 
-	result := config.DB.Find(&destinations)
-	if result.Error != nil {
+	query := config.DB.
+		Table("destinations").
+		Select("destinations.id, destinations.name, destinations.description, destinations.location, destinations.price_per_person, destinations.image, destinations.category_id, destination_categories.name AS category_name, destinations.created_by")
+
+	if err := query.Joins("LEFT JOIN destination_categories ON destinations.category_id = destination_categories.id").Scan(&destinations).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": result.Error.Error(),
+			"error": err.Error(),
 		})
 		return
 	}
@@ -30,17 +33,22 @@ func GetDestinationById(c *gin.Context) {
 	id := c.Param("id")
 	var destination models.DestinationDetailResponse
 
-	result := config.DB.First(&destination, id)
+	query := config.DB.
+		Table("destinations").
+		Select("destinations.id, destinations.name, destinations.description, destinations.location, destinations.price_per_person, destinations.image, destinations.category_id, destination_categories.name AS category_name, users.full_name AS creator_name, destinations.created_by").
+		Joins("LEFT JOIN destination_categories ON destinations.category_id = destination_categories.id").
+		Joins("LEFT JOIN users ON destinations.created_by = users.id").
+		Where("destinations.id = ?", id)
 
-	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
+	if err := query.First(&destination).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{
 				"error": "Destination Not Found",
 			})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": result.Error.Error(),
+			"error": err.Error(),
 		})
 		return
 	}

@@ -91,4 +91,3 @@ func GetDestinationReviews(c *gin.Context) {
 		"data": reviews,
 	})
 }
-

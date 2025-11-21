@@ -117,4 +117,3 @@ func GetMyBookings(c *gin.Context) {
 		"data": bookings,
 	})
 }
-
