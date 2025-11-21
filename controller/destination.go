@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	config "github.com/Rifq11/Trava-be/config"
+	helper "github.com/Rifq11/Trava-be/helper"
 	models "github.com/Rifq11/Trava-be/models"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -89,8 +90,32 @@ func CreateDestination(c *gin.Context) {
 		return
 	}
 
-	var req models.CreateDestinationRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	userIdInt := userID.(int)
+
+	var image string
+	if uploadedFile, exists := c.Get("uploaded_file"); exists {
+		if filename, ok := uploadedFile.(string); ok {
+			// get url
+			image = helper.GetFileUrl(filename)
+		}
+	}
+	if image == "" {
+		image = c.PostForm("image")
+	}
+
+	categoryIDStr := c.PostForm("category_id")
+	if categoryIDStr == "" {
+		categoryIDStr = c.PostForm("categoryId")
+	}
+	name := c.PostForm("name")
+	description := c.PostForm("description")
+	location := c.PostForm("location")
+	pricePerPersonStr := c.PostForm("price_per_person")
+	if pricePerPersonStr == "" {
+		pricePerPersonStr = c.PostForm("pricePerPerson")
+	}
+
+	if categoryIDStr == "" || name == "" || location == "" || pricePerPersonStr == "" {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Status:  "error",
 			Message: "Category ID, name, location, and price per person are required",
@@ -98,15 +123,32 @@ func CreateDestination(c *gin.Context) {
 		return
 	}
 
-	userIdInt := userID.(int)
+	categoryID, err := strconv.Atoi(categoryIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Status:  "error",
+			Message: "Invalid category ID",
+		})
+		return
+	}
+
+	pricePerPerson, err := strconv.Atoi(pricePerPersonStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Status:  "error",
+			Message: "Invalid price per person",
+		})
+		return
+	}
+
 	destination := models.Destination{
-		CategoryID:     req.CategoryID,
+		CategoryID:     categoryID,
 		CreatedBy:      userIdInt,
-		Name:           req.Name,
-		Description:    req.Description,
-		Location:       req.Location,
-		PricePerPerson: req.PricePerPerson,
-		Image:          req.Image,
+		Name:           name,
+		Description:    description,
+		Location:       location,
+		PricePerPerson: pricePerPerson,
+		Image:          image,
 	}
 
 	if err := config.DB.Create(&destination).Error; err != nil {
@@ -134,15 +176,6 @@ func UpdateDestination(c *gin.Context) {
 		return
 	}
 
-	var req models.UpdateDestinationRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid request body",
-		})
-		return
-	}
-
 	var destination models.Destination
 	if err := config.DB.First(&destination, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -159,23 +192,52 @@ func UpdateDestination(c *gin.Context) {
 		return
 	}
 
-	if req.CategoryID != nil {
-		destination.CategoryID = *req.CategoryID
+	var image string
+	if uploadedFile, exists := c.Get("uploaded_file"); exists {
+		if filename, ok := uploadedFile.(string); ok {
+			// get url
+			image = helper.GetFileUrl(filename)
+		}
 	}
-	if req.Name != nil {
-		destination.Name = *req.Name
+	if image == "" {
+		image = c.PostForm("image")
 	}
-	if req.Description != nil {
-		destination.Description = *req.Description
+
+	categoryIDStr := c.PostForm("category_id")
+	if categoryIDStr == "" {
+		categoryIDStr = c.PostForm("categoryId")
 	}
-	if req.Location != nil {
-		destination.Location = *req.Location
+	name := c.PostForm("name")
+	description := c.PostForm("description")
+	location := c.PostForm("location")
+	pricePerPersonStr := c.PostForm("price_per_person")
+	if pricePerPersonStr == "" {
+		pricePerPersonStr = c.PostForm("pricePerPerson")
 	}
-	if req.PricePerPerson != nil {
-		destination.PricePerPerson = *req.PricePerPerson
+
+	if categoryIDStr != "" {
+		categoryID, err := strconv.Atoi(categoryIDStr)
+		if err == nil {
+			destination.CategoryID = categoryID
+		}
 	}
-	if req.Image != nil {
-		destination.Image = *req.Image
+	if name != "" {
+		destination.Name = name
+	}
+	if description != "" {
+		destination.Description = description
+	}
+	if location != "" {
+		destination.Location = location
+	}
+	if pricePerPersonStr != "" {
+		pricePerPerson, err := strconv.Atoi(pricePerPersonStr)
+		if err == nil {
+			destination.PricePerPerson = pricePerPerson
+		}
+	}
+	if image != "" {
+		destination.Image = image
 	}
 
 	if err := config.DB.Save(&destination).Error; err != nil {

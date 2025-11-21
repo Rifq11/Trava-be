@@ -2,8 +2,10 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 
 	config "github.com/Rifq11/Trava-be/config"
+	helper "github.com/Rifq11/Trava-be/helper"
 	models "github.com/Rifq11/Trava-be/models"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -68,16 +70,52 @@ func CompleteProfile(c *gin.Context) {
 		return
 	}
 
-	var req models.CompleteProfileRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
-			Status:  "error",
-			Message: "Invalid request body",
-		})
-		return
+	userIdInt := userID.(int)
+
+	var userPhoto string
+	if uploadedFile, exists := c.Get("uploaded_file"); exists {
+		if filename, ok := uploadedFile.(string); ok {
+			// get url
+			userPhoto = helper.GetFileUrl(filename)
+		}
+	}
+	if userPhoto == "" {
+		userPhoto = c.PostForm("user_photo")
+		if userPhoto == "" {
+			userPhoto = c.PostForm("userPhoto")
+		}
 	}
 
-	userIdInt := userID.(int)
+	phone := c.PostForm("phone")
+	address := c.PostForm("address")
+	birthDate := c.PostForm("birth_date")
+	if birthDate == "" {
+		birthDate = c.PostForm("birthDate")
+	}
+	isAdminStr := c.PostForm("is_admin")
+	if isAdminStr == "" {
+		isAdminStr = c.PostForm("isAdmin")
+	}
+
+	var req models.CompleteProfileRequest
+	if phone != "" {
+		req.Phone = &phone
+	}
+	if address != "" {
+		req.Address = &address
+	}
+	if birthDate != "" {
+		req.BirthDate = &birthDate
+	}
+	if userPhoto != "" {
+		req.UserPhoto = &userPhoto
+	}
+	if isAdminStr != "" {
+		isAdmin, err := strconv.ParseBool(isAdminStr)
+		if err == nil {
+			req.IsAdmin = &isAdmin
+		}
+	}
 
 	var user models.User
 	if err := config.DB.First(&user, userIdInt).Error; err != nil {
@@ -187,4 +225,3 @@ func CompleteProfile(c *gin.Context) {
 		Message: "Profile completed successfully",
 	})
 }
-

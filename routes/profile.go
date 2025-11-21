@@ -2,6 +2,7 @@ package routes
 
 import (
 	controller "github.com/Rifq11/Trava-be/controller"
+	helper "github.com/Rifq11/Trava-be/helper"
 	middleware "github.com/Rifq11/Trava-be/middleware"
 	"github.com/gin-gonic/gin"
 )
@@ -11,7 +12,6 @@ func ProfileRoutes(router *gin.RouterGroup) {
 	profile.Use(middleware.RequireAuth())
 	{
 		profile.GET("", controller.GetProfile)
-		profile.POST("/complete", controller.CompleteProfile)
+		profile.PUT("/complete", helper.UploadSingle("user_photo"), controller.CompleteProfile)
 	}
 }
-
