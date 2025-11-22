@@ -27,3 +27,4 @@ func BookingRoutes(router *gin.RouterGroup) {
 		admin.POST("/:id/reject", controller.RejectBooking)
 	}
 }
+ 
