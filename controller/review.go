@@ -71,7 +71,7 @@ func GetDestinationReviews(c *gin.Context) {
 	destinationID := c.Param("id")
 
 	var reviews []models.ReviewResponse
-	result := config.DB.
+	result := config.DB. // join to get spesific data on other table
 		Table("reviews").
 		Select("reviews.id, reviews.booking_id, reviews.user_id, users.full_name as user_name, reviews.rating, reviews.review_text").
 		Joins("INNER JOIN bookings ON reviews.booking_id = bookings.id").
@@ -95,4 +95,35 @@ func GetDestinationReviews(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": reviews})
+}
+
+func GetReviewByBookingID(c *gin.Context) {
+	bookingID := c.Param("id")
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	userIdInt := userID.(int)
+
+	var review models.Review
+	result := config.DB.
+		Where("booking_id = ? AND user_id = ?", bookingID, userIdInt).
+		First(&review)
+
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusOK, gin.H{
+				"data": nil,
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": result.Error.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": review})
 }

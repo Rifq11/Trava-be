@@ -12,6 +12,9 @@ func BookingRoutes(router *gin.RouterGroup) {
 	{
 		bookings.POST("", controller.CreateBooking)
 		bookings.GET("/my", controller.GetMyBookings)
+		bookings.GET("/:id", controller.GetBookingById)
+		bookings.PUT("/:id/cancel", controller.CancelBooking)
+		bookings.POST("/:id/cancel", controller.CancelBooking)
 	}
 
 	admin := router.Group("/admin/bookings")

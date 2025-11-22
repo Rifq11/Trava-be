@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strings"
 
 	config "github.com/Rifq11/Trava-be/config"
 	helper "github.com/Rifq11/Trava-be/helper"
@@ -127,14 +128,71 @@ func UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	var req models.UpdateProfileRequest
-	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	userIdInt := userID.(int)
+
+	var fullName, email, phone, address, birthDate, password, userPhoto string
+	contentType := c.GetHeader("Content-Type")
+
+	if uploadedFile, ok := c.Get("uploaded_file"); ok {
+		if filename, ok2 := uploadedFile.(string); ok2 && filename != "" {
+			userPhoto = helper.GetFileUrl(filename)
+		}
+	}
+
+	isJSONRequest := strings.Contains(contentType, "application/json")
+
+	if userPhoto == "" && isJSONRequest {
+		var req models.UpdateProfileRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		if req.FullName != nil {
+			fullName = *req.FullName
+		}
+		if req.Email != nil {
+			email = *req.Email
+		}
+		if req.Phone != nil {
+			phone = *req.Phone
+		}
+		if req.Address != nil {
+			address = *req.Address
+		}
+		if req.BirthDate != nil {
+			birthDate = *req.BirthDate
+		}
+		if req.Password != nil {
+			password = *req.Password
+		}
+	} else if userPhoto == "" {
+		fullName = c.PostForm("full_name")
+		email = c.PostForm("email")
+		phone = c.PostForm("phone")
+		address = c.PostForm("address")
+		birthDate = c.PostForm("birth_date")
+		password = c.PostForm("password")
+	} else {
+		fullName = c.PostForm("full_name")
+		email = c.PostForm("email")
+		phone = c.PostForm("phone")
+		address = c.PostForm("address")
+		birthDate = c.PostForm("birth_date")
+		password = c.PostForm("password")
+	}
+
+	if birthDate != "" {
+		if strings.Contains(birthDate, "T") {
+			birthDate = strings.Split(birthDate, "T")[0]
+		}
+		birthDate = strings.TrimSuffix(birthDate, "Z")
+		if len(birthDate) > 10 {
+			birthDate = birthDate[:10]
+		}
 	}
 
 	var user models.User
-	userIdInt := userID.(int)
 	result := config.DB.First(&user, userIdInt)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
@@ -145,20 +203,20 @@ func UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	if req.Email != nil && *req.Email != user.Email {
+	if email != "" && email != user.Email {
 		var existingUser models.User
-		if err := config.DB.Where("email = ?", *req.Email).First(&existingUser).Error; err == nil {
+		if err := config.DB.Where("email = ?", email).First(&existingUser).Error; err == nil {
 			c.JSON(http.StatusConflict, gin.H{"error": "User with this email already exists"})
 			return
 		}
-		user.Email = *req.Email
+		user.Email = email
 	}
 
-	if req.FullName != nil {
-		user.FullName = *req.FullName
+	if fullName != "" {
+		user.FullName = fullName
 	}
-	if req.Password != nil {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
+	if password != "" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
 			return
@@ -184,24 +242,14 @@ func UpdateProfile(c *gin.Context) {
 		}
 	}
 
-	if req.Phone != nil {
-		userProfile.Phone = *req.Phone
+	if phone != "" {
+		userProfile.Phone = phone
 	}
-	if req.Address != nil {
-		userProfile.Address = *req.Address
+	if address != "" {
+		userProfile.Address = address
 	}
-	if req.BirthDate != nil {
-		userProfile.BirthDate = *req.BirthDate
-	}
-
-	var userPhoto string
-	if uploadedFile, ok := c.Get("uploaded_file"); ok {
-		if filename, ok2 := uploadedFile.(string); ok2 {
-			userPhoto = helper.GetFileUrl(filename)
-		}
-	}
-	if userPhoto == "" && req.UserPhoto != nil {
-		userPhoto = *req.UserPhoto
+	if birthDate != "" {
+		userProfile.BirthDate = birthDate
 	}
 	if userPhoto != "" {
 		userProfile.UserPhoto = userPhoto

@@ -9,8 +9,10 @@ func SetupRoutes(app *gin.Engine) {
 		ProfileRoutes(api)
 		UserRoutes(api)
 		DestinationRoutes(api)
+		TransportationRoutes(api)
 		BookingRoutes(api)
 		PaymentRoutes(api)
+		PaymentMethodRoutes(api)
 		ReviewRoutes(api)
 		ActivityRoutes(api)
 	}

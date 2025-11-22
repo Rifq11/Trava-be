@@ -11,6 +11,7 @@ func ReviewRoutes(router *gin.RouterGroup) {
 	{
 		reviews.POST("", middleware.RequireAuth(), controller.CreateReview)
 		reviews.GET("/destination/:id", controller.GetDestinationReviews)
+		reviews.GET("/booking/:id", middleware.RequireAuth(), controller.GetReviewByBookingID)
 	}
 }
 

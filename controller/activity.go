@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// optional i think for now
 func LogActivity(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {

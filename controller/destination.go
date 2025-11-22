@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 
 	config "github.com/Rifq11/Trava-be/config"
 	helper "github.com/Rifq11/Trava-be/helper"
@@ -13,7 +14,24 @@ import (
 func GetDestinations(c *gin.Context) {
 	var destinations []models.Destination
 
-	result := config.DB.Find(&destinations)
+	categoryID := c.Query("category_id")
+	searchQuery := c.Query("search")
+
+	query := config.DB
+
+	if categoryID != "" {
+		categoryIDInt, err := strconv.Atoi(categoryID)
+		if err == nil {
+			query = query.Where("category_id = ?", categoryIDInt)
+		}
+	}
+
+	if searchQuery != "" {
+		searchPattern := "%" + searchQuery + "%"
+		query = query.Where("name LIKE ? OR location LIKE ?", searchPattern, searchPattern)
+	}
+
+	result := query.Find(&destinations)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": result.Error.Error(),
@@ -23,6 +41,22 @@ func GetDestinations(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"data": destinations,
+	})
+}
+
+func GetDestinationCategories(c *gin.Context) {
+	var categories []models.DestinationCategory
+
+	result := config.DB.Find(&categories)
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": result.Error.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": categories,
 	})
 }
 
@@ -61,11 +95,36 @@ func CreateDestination(c *gin.Context) {
 
 	userIdInt := userID.(int)
 
-	var req models.CreateDestinationRequest
-	if err := c.ShouldBind(&req); err != nil {
+	categoryIDStr := c.PostForm("category_id")
+	name := c.PostForm("name")
+	description := c.PostForm("description")
+	location := c.PostForm("location")
+	pricePerPersonStr := c.PostForm("price_per_person")
+
+	if categoryIDStr == "" || name == "" || location == "" || pricePerPersonStr == "" {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Status:  "error",
-			Message: "Validation error: " + err.Error(),
+			Message: "Validation error: category_id, name, location, and price_per_person are required",
+		})
+		return
+	}
+
+	var categoryID int
+	var pricePerPerson int
+	var err error
+
+	if categoryID, err = strconv.Atoi(categoryIDStr); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Status:  "error",
+			Message: "Validation error: category_id must be a number",
+		})
+		return
+	}
+
+	if pricePerPerson, err = strconv.Atoi(pricePerPersonStr); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Status:  "error",
+			Message: "Validation error: price_per_person must be a number",
 		})
 		return
 	}
@@ -77,16 +136,16 @@ func CreateDestination(c *gin.Context) {
 		}
 	}
 	if image == "" {
-		image = req.Image
+		image = c.PostForm("image")
 	}
 
 	destination := models.Destination{
-		CategoryID:     req.CategoryID,
+		CategoryID:     categoryID,
 		CreatedBy:      userIdInt,
-		Name:           req.Name,
-		Description:    req.Description,
-		Location:       req.Location,
-		PricePerPerson: req.PricePerPerson,
+		Name:           name,
+		Description:    description,
+		Location:       location,
+		PricePerPerson: pricePerPerson,
 		Image:          image,
 	}
 
@@ -116,37 +175,40 @@ func UpdateDestination(c *gin.Context) {
 		return
 	}
 
-	var req models.UpdateDestinationRequest
-	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	updates := map[string]interface{}{}
+
+	if categoryIDStr := c.PostForm("category_id"); categoryIDStr != "" {
+		if categoryID, err := strconv.Atoi(categoryIDStr); err == nil {
+			updates["category_id"] = categoryID
+		}
+	}
+	if name := c.PostForm("name"); name != "" {
+		updates["name"] = name
+	}
+	if description := c.PostForm("description"); description != "" {
+		updates["description"] = description
+	}
+	if location := c.PostForm("location"); location != "" {
+		updates["location"] = location
+	}
+	if pricePerPersonStr := c.PostForm("price_per_person"); pricePerPersonStr != "" {
+		if pricePerPerson, err := strconv.Atoi(pricePerPersonStr); err == nil {
+			updates["price_per_person"] = pricePerPerson
+		}
 	}
 
 	if uploaded, exists := c.Get("uploaded_file"); exists {
 		if filename, ok := uploaded.(string); ok {
 			url := helper.GetFileUrl(filename)
-			req.Image = &url
+			updates["image"] = url
 		}
+	} else if image := c.PostForm("image"); image != "" {
+		updates["image"] = image
 	}
 
-	updates := map[string]interface{}{}
-	if req.CategoryID != nil {
-		updates["category_id"] = *req.CategoryID
-	}
-	if req.Name != nil {
-		updates["name"] = *req.Name
-	}
-	if req.Description != nil {
-		updates["description"] = *req.Description
-	}
-	if req.Location != nil {
-		updates["location"] = *req.Location
-	}
-	if req.PricePerPerson != nil {
-		updates["price_per_person"] = *req.PricePerPerson
-	}
-	if req.Image != nil {
-		updates["image"] = *req.Image
+	if len(updates) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No fields to update"})
+		return
 	}
 
 	if err := config.DB.Model(&destination).Updates(updates).Error; err != nil {

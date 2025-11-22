@@ -17,14 +17,18 @@ type Booking struct {
 
 type BookingResponse struct {
 	BookingID         int    `json:"booking_id"`
+	DestinationID     int    `json:"destination_id"`
 	DestinationName   string `json:"destination_name"`
 	Location          string `json:"location"`
 	PeopleCount       int    `json:"people_count"`
 	StartDate         string `json:"start_date"`
 	EndDate           string `json:"end_date"`
 	TotalPrice        int    `json:"total_price"`
+	TransportPrice    int    `json:"transport_price"`
+	DestinationPrice  int    `json:"destination_price"`
 	StatusName        string `json:"status_name"`
 	PaymentMethodName string `json:"payment_method_name"`
+	DestinationImage  string `json:"destination_image"`
 }
 
 type CreateBookingRequest struct {
