@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"fmt"
 
 	config "github.com/Rifq11/Trava-be/config"
 	models "github.com/Rifq11/Trava-be/models"
@@ -176,18 +177,94 @@ func GetMyBookings(c *gin.Context) {
 }
 
 func GetAllBookingsAdmin(c *gin.Context) {
-	var bookings []models.Booking
-	if err := config.DB.
-		Find(&bookings).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	status := c.Query("status")
+	search := c.Query("search")
+
+	var bookings []models.AdminBookingResponse
+
+	query := config.DB.Table("bookings").
+		Select(`
+            bookings.id AS id,
+            bookings.user_id,
+            users.full_name AS user_name,
+            users.email AS user_email,
+            destinations.name AS destination_name,
+            booking_status.name AS status_name,
+            payment_methods.name AS payment_method,
+            bookings.people_count,
+            bookings.start_date,
+            bookings.end_date,
+            bookings.total_price,
+            bookings.transport_price,
+            bookings.destination_price
+        `).
+		Joins("JOIN users ON users.id = bookings.user_id").
+		Joins("JOIN destinations ON destinations.id = bookings.destination_id").
+		Joins("JOIN booking_status ON booking_status.id = bookings.status_id").
+		Joins("JOIN payment_methods ON payment_methods.id = bookings.payment_method_id")
+
+	if status != "" {
+		query = query.Where("LOWER(booking_status.name) = ?", strings.ToLower(status))
+	}
+
+	if search != "" {
+		pattern := "%" + search + "%"
+		query = query.Where(`
+            users.full_name LIKE ? OR 
+            destinations.name LIKE ? OR 
+            CAST(bookings.id AS CHAR) LIKE ?`, pattern, pattern, pattern)
+	}
+
+	if err := query.Order("bookings.id DESC").Scan(&bookings).Error; err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 
 	if bookings == nil {
-		bookings = []models.Booking{}
+		bookings = []models.AdminBookingResponse{}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": bookings})
+	for _, booking := range bookings {
+		booking.Code = fmt.Sprintf("TRV-%03d", booking.ID)
+	}
+
+	c.JSON(200, gin.H{"data": bookings})
+}
+
+func AdminGetBookingDetail(c *gin.Context) {
+    id := c.Param("id")
+    var detail models.AdminBookingDetailResponse
+
+    err := config.DB.Table("bookings").
+        Select(`
+            bookings.id AS id,
+            users.full_name AS user_name,
+            destinations.name AS destination_name,
+            CONCAT(destinations.name, ' - ', destinations.location) AS destination_full,
+            bookings.start_date,
+            bookings.end_date,
+            transport_types.name AS transport_name,
+            bookings.people_count,
+            bookings.total_price,
+            payment_methods.name AS payment_method,
+            destinations.image AS destination_image
+        `).
+        Joins("JOIN users ON users.id = bookings.user_id").
+        Joins("JOIN destinations ON destinations.id = bookings.destination_id").
+        Joins("JOIN transportation ON transportation.id = bookings.transportation_id").
+        Joins("JOIN transport_types ON transport_types.id = transportation.transport_type_id").
+        Joins("JOIN payment_methods ON payment_methods.id = bookings.payment_method_id").
+        Where("bookings.id = ?", id).
+        Scan(&detail).Error
+
+    if err != nil {
+        c.JSON(500, gin.H{"error": err.Error()})
+        return
+    }
+
+    detail.Code = fmt.Sprintf("TRV-%03d", detail.ID)
+
+    c.JSON(200, gin.H{"data": detail})
 }
 
 func ApproveBooking(c *gin.Context) {

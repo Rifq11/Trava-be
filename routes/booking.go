@@ -21,10 +21,9 @@ func BookingRoutes(router *gin.RouterGroup) {
 	admin.Use(middleware.RequireAdmin())
 	{
 		admin.GET("", controller.GetAllBookingsAdmin)
+		admin.GET("/:id/detail", controller.AdminGetBookingDetail)
 		admin.PUT("/:id/approve", controller.ApproveBooking)
-		admin.POST("/:id/approve", controller.ApproveBooking)
 		admin.PUT("/:id/reject", controller.RejectBooking)
-		admin.POST("/:id/reject", controller.RejectBooking)
 	}
 }
  

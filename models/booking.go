@@ -51,6 +51,7 @@ type PaymentMethod struct {
 }
 
 type AdminBookingResponse struct {
+	Code             string `json:"code"`
 	ID               int    `json:"id"`
 	UserID           int    `json:"user_id"`
 	UserName         string `json:"user_name"`
@@ -64,4 +65,18 @@ type AdminBookingResponse struct {
 	TotalPrice       int    `json:"total_price"`
 	TransportPrice   int    `json:"transport_price"`
 	DestinationPrice int    `json:"destination_price"`
+}
+
+type AdminBookingDetailResponse struct {
+	Code             string `json:"code"`
+	ID               int    `json:"id"`
+	UserName         string `json:"user_name"`
+	DestinationFull  string `json:"destination_full"`
+	StartDate        string `json:"start_date"`
+	EndDate          string `json:"end_date"`
+	TransportName    string `json:"transport_name"`
+	PeopleCount      int    `json:"people_count"`
+	TotalPrice       int    `json:"total_price"`
+	PaymentMethod    string `json:"payment_method"`
+	DestinationImage string `json:"destination_image"`
 }
