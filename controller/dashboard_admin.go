@@ -13,7 +13,7 @@ func GetDashboardStatistics(c *gin.Context) {
 	var totalRegisteredUsers int64
 
 	config.DB.Table("destinations").Count(&totalDestinations)
-	config.DB.Table("bookings").Where("status_id IN (1,2,5)").Count(&totalActiveOrders)
+	config.DB.Table("bookings").Where("status_id IN (1,2)").Count(&totalActiveOrders)
 	config.DB.Table("users").Where("role_id = 2").Count(&totalRegisteredUsers)
 
 	response := models.DashboardStatisticsResponse{
@@ -31,6 +31,7 @@ func GetMonthlySales(c *gin.Context) {
 
 	query := config.DB.Table("bookings").
 		Select("MONTH(created_at) AS month, SUM(total_price) AS revenue").
+		Where("status_id = 5").
 		Group("MONTH(created_at)").
 		Order("MONTH(created_at) ASC")
 

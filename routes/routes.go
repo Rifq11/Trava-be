@@ -16,5 +16,6 @@ func SetupRoutes(app *gin.Engine) {
 		ReviewRoutes(api)
 		ActivityRoutes(api)
 		DashboardRoutes(api)
+		ReportRoutes(api)
 	}
 }
