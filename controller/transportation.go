@@ -169,6 +169,6 @@ func DeleteTransportation(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Transportation, bookings, reviews, and payments deleted successfully",
+		"message": "Transportation deleted successfully",
 	})
 }
