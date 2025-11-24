@@ -11,4 +11,5 @@ func ReportRoutes(router *gin.RouterGroup) {
 	reports.Use(middleware.RequireAdmin())
 	reports.GET("/orders", controller.GetReportOrders)
 	reports.GET("/income", controller.GetIncomeReport)
+	reports.GET("/income-by-destination", controller.GetIncomeByDestination)
 }
